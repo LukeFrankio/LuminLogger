@@ -1,0 +1,80 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up CMake
+        uses: actions/setup-cmake@v1
+
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config Release
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C Release
+
+      - name: Create packages
+        working-directory: ${{github.workspace}}/build
+        run: cpack -G "TGZ;ZIP"
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: LuminLogger ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          body: |
+            LuminLogger ${{ steps.get_version.outputs.VERSION }}
+            
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+
+      - name: Upload TGZ Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{github.workspace}}/build/lumin-logger-${{ steps.get_version.outputs.VERSION }}-Linux.tar.gz
+          asset_name: lumin-logger-${{ steps.get_version.outputs.VERSION }}-Linux.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload ZIP Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{github.workspace}}/build/lumin-logger-${{ steps.get_version.outputs.VERSION }}-Linux.zip
+          asset_name: lumin-logger-${{ steps.get_version.outputs.VERSION }}-Linux.zip
+          asset_content_type: application/zip
+
+      - name: Upload Source Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{github.workspace}}/build/lumin-logger-${{ steps.get_version.outputs.VERSION }}-Source.tar.gz
+          asset_name: lumin-logger-${{ steps.get_version.outputs.VERSION }}-Source.tar.gz
+          asset_content_type: application/gzip 

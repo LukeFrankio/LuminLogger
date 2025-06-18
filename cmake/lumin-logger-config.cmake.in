@@ -1,0 +1,23 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Check if we have bundled dependencies
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/lumin-logger-deps.cmake")
+    # Use bundled dependencies
+    include("${CMAKE_CURRENT_LIST_DIR}/lumin-logger-deps.cmake")
+else()
+    # Find system dependencies
+    find_dependency(spdlog REQUIRED)
+    find_dependency(nlohmann_json REQUIRED)
+endif()
+
+# Include targets file
+include("${CMAKE_CURRENT_LIST_DIR}/lumin-logger-targets.cmake")
+
+# Add alias
+if(NOT TARGET lumin::logger)
+    add_library(lumin::logger ALIAS lumin_logger)
+endif()
+
+check_required_components(lumin_logger) 
